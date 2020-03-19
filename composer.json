@@ -1,0 +1,24 @@
+{
+  "name": "indexeddk/headless",
+  "description": "Headless helper",
+  "keywords": ["headless"],
+  "homepage": "https://indexed.dk",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Peter Sørensen",
+      "email": "peter@indexed.dk",
+      "homepage": "https://indexed.dk"
+    }
+  ],
+  "require": {
+    "php": ">=7.2.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~3.7.0"
+  },
+  "autoload": {
+    "psr-0": {"Indexed/Headless": "src/"}
+  }
+}
