@@ -10,12 +10,21 @@ class Request
 
     private $consumerSecret;
 
-    private $url = 'http://headless-webshop.test/app_dev.php/rest/v1.0';
+    private $publicToken;
 
-    public function __construct($consumerKey, $consumerSecret)
+    private $url = 'https://head01.webfamly.com/v1';
+
+    public function __construct($consumerKey, $consumerSecret, $publicToken = '')
     {
         $this->consumerKey = $consumerKey;
         $this->consumerSecret = $consumerSecret;
+        $this->publicToken = $publicToken;
+    }
+
+    public function setUrl($url)
+    {
+        $this->url = $url;
+        return $this;
     }
 
     public function post($uri, $data)
@@ -28,6 +37,20 @@ class Request
     public function get($uri)
     {
         $data = $this->request($uri, self::METHOD_GET);
+
+        return $data;
+    }
+
+    public function patch($uri, $data)
+    {
+        $data = $this->request($uri, 'PATCH', $data);
+
+        return $data;
+    }
+
+    public function delete($uri)
+    {
+        $data = $this->request($uri, 'DELETE');
 
         return $data;
     }
@@ -59,10 +82,19 @@ class Request
 
         try {
             $url = $this->url.$request;
+            $method = trim(strtoupper($method));
+
+            $request = strtolower($request);
+
+            if(($request == '/products' or substr($request, 0, 10) == '/products?')  and $method == 'GET') {
+                $base = base64_encode("$this->publicToken:");
+            } else {
+                $base = base64_encode("$this->consumerKey:$this->consumerSecret");
+            }
 
             $headers = array(
                 'Content-Type: application/json',
-                'Authorization: Basic ' . base64_encode("$this->consumerKey:$this->consumerSecret")
+                'Authorization: Basic ' . $base,
             );
 
             $ch = curl_init($url);
@@ -71,7 +103,9 @@ class Request
             switch ($method) {
                 default:
                 case self::METHOD_GET:
-
+                    break;
+                case 'DELETE':
+                    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
                     break;
                 CASE self::METHOD_POST:
 
@@ -96,7 +130,7 @@ class Request
             }
 
             if (curl_errno($ch)) {
-                throw new Exception(curl_error($ch));
+                throw new \Exception(curl_error($ch));
             }
 
             if($useCache and $method == self::METHOD_GET) {
@@ -114,7 +148,7 @@ class Request
             }
 
         }catch (\Exception $e) {
-            die('<div style="padding:20px;border: solid 1px black;background-color: orange;font-size:16px;"><strong>API error:</strong> <br>'.$e->getMessage().'</div>');
+            die($e->getMessage());
         }
 
         return $data;
