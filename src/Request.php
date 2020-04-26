@@ -143,9 +143,9 @@ class Request
                 throw new \Exception($response);
             }
 
-            if(!empty($data->error)) {
-                throw new \Exception($data->error);
-            }
+//            if(!empty($data->error)) {
+//                throw new \Exception($data->error);
+//            }
 
         }catch (\Exception $e) {
             die($e->getMessage());
