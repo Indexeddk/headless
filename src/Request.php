@@ -5,6 +5,9 @@ class Request
 {
     public const METHOD_POST = 'POST';
     public const METHOD_GET = 'GET';
+    public const METHOD_PUT = 'PUT';
+    public const METHOD_PATCH = 'PATCH';
+    public const METHOD_DELETE = 'DELETE';
 
     private $consumerKey;
 
@@ -13,6 +16,8 @@ class Request
     private $publicToken;
 
     private $url = 'https://head01.webfamly.com/v1';
+
+    private $useCache = false;
 
     public function __construct($consumerKey, $consumerSecret, $publicToken = '')
     {
@@ -55,16 +60,25 @@ class Request
         return $data;
     }
 
+    public function setCache($cache)
+    {
+        $this->useCache = $cache;
+    }
+
     private function request($request, $method, $data = [])
     {
         $dataStr = json_encode($data);
 
-        $useCache = false;
-
-        if($useCache and $method == self::METHOD_GET) {
+        if($this->useCache and $method == self::METHOD_GET) {
 
             $md5Key = md5($request . serialize($data));
-            $file = $_SERVER['DOCUMENT_ROOT'] . '/shop/cache/' . $md5Key;
+            $dir = $_SERVER['DOCUMENT_ROOT'] . '/cache';
+
+            if(!is_dir($dir)) {
+                mkdir($dir, 0777);
+            }
+
+            $file = $dir . '/'.$md5Key;
 
             if (file_exists($file)) {
 
@@ -133,7 +147,7 @@ class Request
                 throw new \Exception(curl_error($ch));
             }
 
-            if($useCache and $method == self::METHOD_GET) {
+            if($this->useCache and $method == self::METHOD_GET) {
                 file_put_contents($file, $response);
             }
 
@@ -142,10 +156,6 @@ class Request
             if(!is_object($data)) {
                 throw new \Exception($response);
             }
-
-//            if(!empty($data->error)) {
-//                throw new \Exception($data->error);
-//            }
 
         }catch (\Exception $e) {
             die($e->getMessage());
