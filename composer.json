@@ -1,6 +1,6 @@
 {
   "name": "indexeddk/headless",
-  "description": "Headless helper",
+  "description": "Headless wrapper to REST api",
   "keywords": ["headless"],
   "homepage": "https://indexed.dk",
   "type": "library",
@@ -13,7 +13,9 @@
     }
   ],
   "require": {
-    "php": ">=7.2.0"
+    "php": ">=7.2.0",
+    "ext-curl": "*",
+    "ext-json": "*"
   },
   "autoload": {
     "psr-4": {"Indexed\\Headless\\": "src/"}
