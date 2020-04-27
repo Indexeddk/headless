@@ -28,7 +28,9 @@ class Request
 
     public function setUrl($url)
     {
+        $url = trim($url, "/");
         $this->url = $url;
+
         return $this;
     }
 
