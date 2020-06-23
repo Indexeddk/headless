@@ -19,11 +19,25 @@ class Request
 
     private $useCache = false;
 
+    private $cachePath = '';
+
+    private $defaultCacheTime = 60;
+
     public function __construct($consumerKey, $consumerSecret, $publicToken = '')
     {
         $this->consumerKey = $consumerKey;
         $this->consumerSecret = $consumerSecret;
         $this->publicToken = $publicToken;
+    }
+
+    public function setCachePath($path)
+    {
+        $this->cachePath = $path;
+    }
+
+    public function setCacheTime($cacheTime)
+    {
+        $this->defaultCacheTime = $cacheTime;
     }
 
     public function setUrl($url)
@@ -62,7 +76,7 @@ class Request
         return $data;
     }
 
-    public function setCache($cache)
+    public function useCache($cache)
     {
         $this->useCache = $cache;
     }
@@ -71,23 +85,29 @@ class Request
     {
         $dataStr = json_encode($data);
 
+        /*
+         * @todo: don't cache sessions(cart)
+         */
         if($this->useCache and $method == self::METHOD_GET) {
 
-            $md5Key = md5($request . serialize($data));
-            $dir = $_SERVER['DOCUMENT_ROOT'] . '/cache';
+            $md5Key = md5($this->consumerKey.$request . serialize($data));
 
-            if(!is_dir($dir)) {
-                mkdir($dir, 0777);
+            if(empty($this->cachePath)) {
+                $this->cachePath = $_SERVER['DOCUMENT_ROOT'] . '/cache';
             }
 
-            $file = $dir . '/'.$md5Key;
+            if(!is_dir($this->cachePath)) {
+                mkdir($this->cachePath, 0777);
+            }
+
+            $file = $this->cachePath . '/'.$md5Key;
 
             if (file_exists($file)) {
 
                 $time = filectime($file);
                 $diff = time() - $time;
 
-                $cacheTime = 60;
+                $cacheTime = $this->defaultCacheTime;
 
                 if ($diff <= $cacheTime) {
                     $data = file_get_contents($file);
@@ -102,7 +122,7 @@ class Request
 
             $request = strtolower($request);
 
-            if(($request == '/products' or substr($request, 0, 10) == '/products?')  and $method == 'GET') {
+            if(($request == '/products' or substr($request, 0, 10) == '/products?')  and $method == self::METHOD_GET) {
                 $base = base64_encode("$this->publicToken:");
             } else {
                 $base = base64_encode("$this->consumerKey:$this->consumerSecret");
@@ -120,13 +140,13 @@ class Request
                 default:
                 case self::METHOD_GET:
                     break;
-                case 'DELETE':
+                case self::METHOD_DELETE:
                     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
                     break;
                 CASE self::METHOD_POST:
 
-                CASE 'PUT':
-                CASE 'PATCH':
+                CASE self::METHOD_PUT:
+                CASE self::METHOD_PATCH:
 
                     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $dataStr);
