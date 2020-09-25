@@ -3,11 +3,11 @@ namespace Indexed\Headless;
 
 class Request
 {
-    public const METHOD_POST = 'POST';
-    public const METHOD_GET = 'GET';
-    public const METHOD_PUT = 'PUT';
-    public const METHOD_PATCH = 'PATCH';
-    public const METHOD_DELETE = 'DELETE';
+    const METHOD_POST = 'POST';
+    const METHOD_GET = 'GET';
+    const METHOD_PUT = 'PUT';
+    const METHOD_PATCH = 'PATCH';
+    const METHOD_DELETE = 'DELETE';
 
     private $consumerKey;
 
@@ -15,7 +15,7 @@ class Request
 
     private $publicToken;
 
-    private $url = 'https://head01.webfamly.com/v1';
+    private $url = 'https://api.indexedshop.com/v1';
 
     private $useCache = false;
 
@@ -23,11 +23,18 @@ class Request
 
     private $defaultCacheTime = 60;
 
+    private $exceptionOnError = false;
+
     public function __construct($consumerKey, $consumerSecret, $publicToken = '')
     {
         $this->consumerKey = $consumerKey;
         $this->consumerSecret = $consumerSecret;
         $this->publicToken = $publicToken;
+    }
+
+    public function exceptionOnError($exception = false)
+    {
+        $this->exceptionOnError = $exception;
     }
 
     public function setCachePath($path)
@@ -81,14 +88,53 @@ class Request
         $this->useCache = $cache;
     }
 
+    /**
+     * Get the base root request
+     *
+     * @param $root
+     * @return mixed|string
+     */
+    private function getRoot($root)
+    {
+        if(strstr($root, '?') !== false) {
+            $root = substr($root, 0, strpos($root, '?'));
+        }
+
+        $root = trim($root, '/');
+        $roots = explode('/', $root);
+        $root = $roots[0];
+
+        return $root;
+    }
+
+    /**
+     * Cleanup cache
+     */
+    private function cleanupCache()
+    {
+        if($this->useCache and !empty($this->cachePath) and is_dir($this->cachePath) and is_writeable($this->cachePath)) {
+            $files = scandir($this->cachePath);
+
+            foreach($files as $file) {
+
+                if(in_array($file, ['.', '..', '.gitkeep', '.gitignore', '.htaccess'])) continue;
+
+                $filePath = $this->cachePath . '/'.$file;
+
+                if(filectime($filePath) < strtotime('-24 hours')) {
+                    unlink($filePath);
+                }
+            }
+        }
+    }
+
     private function request($request, $method, $data = [])
     {
         $dataStr = json_encode($data);
 
-        /*
-         * @todo: don't cache sessions(cart)
-         */
-        if($this->useCache and $method == self::METHOD_GET) {
+        $root = $this->getRoot($request);
+
+        if($this->useCache and $method == self::METHOD_GET and !in_array($root, ['sessions'])) {
 
             $md5Key = md5($this->consumerKey.$request . serialize($data));
 
@@ -98,6 +144,10 @@ class Request
 
             if(!is_dir($this->cachePath)) {
                 mkdir($this->cachePath, 0777);
+
+                if(!file_exists($this->cachePath.'/.htaccess')) {
+                    file_put_contents($this->cachePath.'/.htaccess', 'deny from all');
+                }
             }
 
             $file = $this->cachePath . '/'.$md5Key;
@@ -169,7 +219,7 @@ class Request
                 throw new \Exception(curl_error($ch));
             }
 
-            if($this->useCache and $method == self::METHOD_GET) {
+            if($this->useCache and $method == self::METHOD_GET and !in_array($root, ['sessions']) and isset($file)) {
                 file_put_contents($file, $response);
             }
 
@@ -179,8 +229,24 @@ class Request
                 throw new \Exception($response);
             }
 
+            /*
+             * Periodic cleanup of cache files
+             */
+            if($this->useCache) {
+                if(rand(1, 1000) == 1) {
+                    $this->cleanupCache();
+                }
+            }
+
         }catch (\Exception $e) {
-            die($e->getMessage());
+            die('Unhandled headless error: '.$e->getMessage());
+        }
+
+        /*
+         * Throw an exception on error from headless
+         */
+        if($this->exceptionOnError and !empty($response->error)) {
+            throw new \Exception($response->error);
         }
 
         return $data;
