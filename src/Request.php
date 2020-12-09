@@ -76,6 +76,13 @@ class Request
         return $data;
     }
 
+    public function put($uri, $data)
+    {
+        $data = $this->request($uri, 'PUT', $data);
+
+        return $data;
+    }
+
     public function delete($uri)
     {
         $data = $this->request($uri, 'DELETE');
