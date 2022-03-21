@@ -62,9 +62,9 @@ class Request
         return $data;
     }
 
-    public function get($uri)
+    public function get($uri, $cacheSeconds = 0)
     {
-        $data = $this->request($uri, self::METHOD_GET);
+        $data = $this->request($uri, self::METHOD_GET, [], $cacheSeconds);
 
         return $data;
     }
@@ -135,26 +135,26 @@ class Request
         }
     }
 
-    private function request($request, $method, $data = [])
+    private function request($request, $method, $data = [], $cacheSeconds = 0)
     {
         $dataStr = json_encode($data);
 
         $root = $this->getRoot($request);
 
-        if($this->useCache and $method == self::METHOD_GET and !in_array($root, ['sessions'])) {
+        if($cacheSeconds > 0 and $method == self::METHOD_GET and !in_array($root, ['sessions'])) {
 
             $md5Key = md5($this->consumerKey.$request . serialize($data));
 
             if(empty($this->cachePath)) {
-                $this->cachePath = $_SERVER['DOCUMENT_ROOT'] . '/cache';
+                $this->cachePath = __DIR__ . '/../../../../var/cache/api';
             }
 
             if(!is_dir($this->cachePath)) {
                 mkdir($this->cachePath, 0777);
 
-                if(!file_exists($this->cachePath.'/.htaccess')) {
-                    file_put_contents($this->cachePath.'/.htaccess', 'deny from all');
-                }
+//                if(!file_exists($this->cachePath.'/.htaccess')) {
+//                    file_put_contents($this->cachePath.'/.htaccess', 'deny from all');
+//                }
             }
 
             $file = $this->cachePath . '/'.$md5Key;
@@ -230,7 +230,7 @@ class Request
                 throw new \Exception(curl_error($ch));
             }
 
-            if($this->useCache and $method == self::METHOD_GET and !in_array($root, ['sessions']) and isset($file)) {
+            if($cacheSeconds > 0 and $method == self::METHOD_GET and !in_array($root, ['sessions']) and isset($file)) {
                 file_put_contents($file, $response);
             }
 
