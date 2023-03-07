@@ -25,6 +25,8 @@ class Request
 
     private $exceptionOnError = false;
 
+    private $session = '';
+
     public function __construct($consumerKey, $consumerSecret, $publicToken = '')
     {
         $this->consumerKey = $consumerKey;
@@ -198,6 +200,7 @@ class Request
             $headers = array(
                 'Content-Type: application/json',
                 'Authorization: Basic ' . $base,
+                'X-Headless-session:' . $this->getSession(),
             );
 
             $ch = curl_init($url);
@@ -278,5 +281,23 @@ class Request
         }
 
         return $data;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getSession(): string
+    {
+        return $this->session;
+    }
+
+    /**
+     * @param string $session
+     * @return Request
+     */
+    public function setSession(string $session): Request
+    {
+        $this->session = $session;
+        return $this;
     }
 }
