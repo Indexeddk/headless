@@ -173,13 +173,6 @@ class Request
 
                     $data = json_decode($data);
 
-                    /*
-                     * Support for Symfony debug bar
-                     */
-                    if(function_exists('dump') and !empty($_ENV['APP_ENV']) and $_ENV['APP_ENV'] == 'dev') {
-                        dump($data);
-                    }
-
                     return $data;
                 }
             }
@@ -248,13 +241,6 @@ class Request
             }
 
             $data = json_decode($response);
-
-            /*
-             * Support for Symfony debug bar
-             */
-            if(function_exists('dump') and !empty($_ENV['APP_ENV']) and $_ENV['APP_ENV'] == 'dev') {
-                dump($request, $data);
-            }
 
             if(!is_object($data)) {
                 throw new \Exception($response);
