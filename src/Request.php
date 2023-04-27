@@ -274,6 +274,10 @@ class Request
      */
     public function getSession(): string
     {
+        if(empty($this->session)) {
+            $this->session = uniqid();
+        }
+
         return $this->session;
     }
 
