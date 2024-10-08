@@ -64,9 +64,9 @@ class Request
         return $data;
     }
 
-    public function get($uri, $cacheSeconds = 0)
+    public function get($uri, $cacheSeconds = 0, $cacheGroup = '')
     {
-        $data = $this->request($uri, self::METHOD_GET, [], $cacheSeconds);
+        $data = $this->request($uri, self::METHOD_GET, [], $cacheSeconds, $cacheGroup);
 
         return $data;
     }
@@ -137,7 +137,48 @@ class Request
         }
     }
 
-    private function request($request, $method, $data = [], $cacheSeconds = 0)
+    /**
+     * @param $cacheGroup
+     * @return void
+     */
+    public function clearCacheGroup($cacheGroup)
+    {
+        if(empty($this->cachePath)) {
+            $this->cachePath = __DIR__ . '/../../../../var/cache/api';
+        }
+
+        if(!empty($cacheGroup)) {
+            $cachePath = $this->cachePath. '/' . $cacheGroup;
+
+            /*
+             * remove all files
+             */
+            if(is_readable($cachePath)) {
+                $this->rmdirRecursive($cachePath);
+            }
+        }
+    }
+
+    /**
+     * @param $dir
+     * @return void
+     */
+    private function rmdirRecursive($dir) {
+        foreach(scandir($dir) as $file) {
+
+            if ('.' === $file || '..' === $file) continue;
+
+            if (is_dir("$dir/$file")) {
+                $this->rmdirRecursive("$dir/$file");
+            }else {
+                unlink("$dir/$file");
+            }
+        }
+
+        rmdir($dir);
+    }
+
+    private function request($request, $method, $data = [], $cacheSeconds = 0, $cacheGroup = '')
     {
         $dataStr = json_encode($data);
 
@@ -151,15 +192,17 @@ class Request
                 $this->cachePath = __DIR__ . '/../../../../var/cache/api';
             }
 
-            if(!is_dir($this->cachePath)) {
-                mkdir($this->cachePath, 0777);
-
-//                if(!file_exists($this->cachePath.'/.htaccess')) {
-//                    file_put_contents($this->cachePath.'/.htaccess', 'deny from all');
-//                }
+            if(!empty($cacheGroup)) {
+                $cachePath = $this->cachePath. '/' . $cacheGroup;
+            } else {
+                $cachePath = $this->cachePath;
             }
 
-            $file = $this->cachePath . '/'.$md5Key;
+            if(!is_dir($cachePath)) {
+                mkdir($cachePath, 0777);
+            }
+
+            $file = $cachePath . '/'.$md5Key;
 
             if (file_exists($file)) {
 
@@ -220,6 +263,7 @@ class Request
 
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_ENCODING, "");//sends a default header with all accepted
 
             //support self-signed certificate
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
